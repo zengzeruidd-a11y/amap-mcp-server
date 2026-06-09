@@ -1,0 +1,31 @@
+{
+  "name": "amap-mcp-server",
+  "version": "1.0.0",
+  "description": "高德地图 MCP Server — 为 AI 助手提供路径规划、地理编码、POI 搜索等 9 个地图工具",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "amap",
+    "gaode",
+    "maps",
+    "geocoding",
+    "directions",
+    "poi",
+    "china-maps",
+    "claude-code"
+  ],
+  "author": "曾泽瑞 (Zeng Zerui)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
