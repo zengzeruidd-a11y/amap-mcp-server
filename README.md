@@ -34,7 +34,7 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that w
 ### Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/amap-mcp-server.git
+git clone https://github.com/zengzeruidd-a11y/amap-mcp-server.git
 cd amap-mcp-server
 npm install
 ```
@@ -120,7 +120,7 @@ MIT © 2026 曾泽瑞 (Zeng Zerui)
 ### 安装
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/amap-mcp-server.git
+git clone https://github.com/zengzeruidd-a11y/amap-mcp-server.git
 cd amap-mcp-server
 npm install
 ```
