@@ -23,6 +23,7 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that w
 | `amap_poi_search` | 🔍 POI search by keyword (restaurants, hotels, gas stations, etc.) |
 | `amap_poi_around` | 📍 Nearby search within a radius |
 | `amap_distance` | 📏 Batch distance/time measurement (up to 10 origins) |
+| `amap_poi_ranking` | 🏆 Rating-based POI ranking — like Amap's "Street Ranking". Search by keyword, sort by rating/cost, top N |
 | `amap_ip_location` | 🏠 IP-based coarse location (city level) |
 
 ### Prerequisites
@@ -71,6 +72,8 @@ Once configured, ask Claude:
 
 > "Compare distances from my home, office, and the train station to 天河机场"
 
+> "Find the top 10 highest-rated cocktail bars within 5km of 三乡, sorted by rating"
+
 ### API Reference
 
 All tools use the Amap Web Service API v3/v4. See [Amap API Docs](https://lbs.amap.com/api/webservice/summary/) for details.
@@ -108,6 +111,7 @@ MIT © 2026 曾泽瑞 (Zeng Zerui)
 | `amap_direction_bicycling` | 🚲 骑行导航 |
 | `amap_poi_search` | 🔍 关键词搜索地点（餐厅、酒店、加油站等） |
 | `amap_poi_around` | 📍 周边搜索（指定半径） |
+| `amap_poi_ranking` | 🏆 评分榜单——类似高德「扫街榜」，按评分/价格排序，Top N |
 | `amap_distance` | 📏 批量测距（最多 10 个起点同时比较） |
 | `amap_ip_location` | 🏠 IP 粗略定位（城市级） |
 
@@ -156,6 +160,8 @@ npm install
 > "从汉口站到武昌站怎么坐地铁最快？"
 
 > "帮我算一下从家、公司和火车站分别到天河机场的距离和时间"
+
+> "三乡附近 5 公里内评分最高的 10 家清吧有哪些？按评分排"
 
 ### 驾车策略
 

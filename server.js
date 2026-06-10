@@ -194,11 +194,30 @@ const TOOLS = [
     description: "IP 定位。获取当前网络出口的粗略位置（城市级别），用于快速确定「我在哪」。无需任何参数。",
     inputSchema: { type: "object", properties: {} },
   },
+  {
+    name: "amap_poi_ranking",
+    description:
+      "POI 评分榜单 —— 类似高德「扫街榜」。搜索指定区域/城市内某类POI，按评分/价格排序，返回Top N。找好餐厅、好酒吧、热门打卡地就用这个。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        keywords: { type: "string", description: "搜索关键词，如「清吧」「西餐」「糖水」「火锅」" },
+        types: { type: "string", description: "POI类型代码，如「050100」（中餐厅）「050200」（外国餐厅）" },
+        city: { type: "string", description: "城市，如「中山」「珠海」" },
+        location: { type: "string", description: "中心点坐标（lng,lat），传入后做周边搜索并按评分排序" },
+        radius: { type: "integer", description: "周边搜索半径（米），默认 5000，最大 50000" },
+        sort: { type: "string", description: "排序方式: rating=评分降序（默认）, cost_asc=价格升序, cost_desc=价格降序" },
+        top: { type: "integer", description: "返回前N条，默认10，最大25" },
+        min_rating: { type: "string", description: "最低评分过滤，如「4.0」只返回4星以上" },
+      },
+      required: ["keywords"],
+    },
+  },
 ];
 
 // ── Server ───────────────────────────────────────────────────
 const server = new Server(
-  { name: "amap-mcp-server", version: "1.0.0" },
+  { name: "amap-mcp-server", version: "1.1.0" },
   { capabilities: { tools: {} } }
 );
 
@@ -442,6 +461,104 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             ].join("\n"),
           }],
         };
+      }
+
+      // ── POI Ranking ─────────────────────────────────
+      case "amap_poi_ranking": {
+        const top = Math.min(args?.top || 10, 25);
+        const minRating = args?.min_rating ? parseFloat(args.min_rating) : 0;
+        const sortMode = args?.sort || "rating";
+        const maxPages = 5; // max 125 results (25×5)
+
+        // Fetch POIs — use around search if location given, else text search
+        let allPois = [];
+        if (args?.location) {
+          for (let page = 1; page <= maxPages; page++) {
+            const data = await amapGet("/v3/place/around", {
+              location: args.location,
+              keywords: args.keywords || "",
+              types: args.types,
+              radius: args.radius || 5000,
+              sortrule: "distance",
+              offset: 25,
+              page,
+              extensions: "all",
+            });
+            const pois = data?.pois || [];
+            allPois.push(...pois);
+            if (pois.length < 25) break;
+          }
+        } else {
+          for (let page = 1; page <= maxPages; page++) {
+            const data = await amapGet("/v3/place/text", {
+              keywords: args.keywords,
+              types: args.types,
+              city: args.city,
+              citylimit: "true",
+              offset: 25,
+              page,
+              extensions: "all",
+            });
+            const pois = data?.pois || [];
+            allPois.push(...pois);
+            if (pois.length < 25) break;
+          }
+        }
+
+        if (!allPois.length) {
+          return { content: [{ type: "text", text: `搜索「${args?.keywords}」无结果` }] };
+        }
+
+        // Parse & filter
+        const parsed = allPois
+          .map(p => ({
+            name: p.name || "—",
+            address: p.address || "—",
+            rating: parseFloat(p.biz_ext?.rating) || 0,
+            cost: parseFloat(p.biz_ext?.cost) || 0,
+            type: p.type || "—",
+            distance: p.distance ? parseInt(p.distance) : null,
+            tel: p.tel || "",
+            open_time: p.biz_ext?.open_time || "",
+            location: p.location || "",
+          }))
+          .filter(p => p.rating >= minRating);
+
+        // Sort
+        if (sortMode === "rating") {
+          parsed.sort((a, b) => b.rating - a.rating);
+        } else if (sortMode === "cost_asc") {
+          parsed.sort((a, b) => (a.cost || 9999) - (b.cost || 9999));
+        } else if (sortMode === "cost_desc") {
+          parsed.sort((a, b) => (b.cost || 0) - (a.cost || 0));
+        }
+
+        const ranked = parsed.slice(0, top);
+        const locInfo = args?.location
+          ? `${args.radius || 5000}m内`
+          : `${args.city || "全国"}`;
+
+        const lines = [
+          `## 🏆 扫街榜: ${args.keywords}  (${locInfo}, 按${sortMode === "rating" ? "评分" : sortMode === "cost_asc" ? "低价" : "高价"}排序)`,
+          ``,
+          `| # | 店名 | 评分 | 人均 | 距离 | 地址 |`,
+          `|---|------|:--:|:--:|:--:|------|`,
+        ];
+
+        for (let i = 0; i < ranked.length; i++) {
+          const r = ranked[i];
+          const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`;
+          const distStr = r.distance !== null
+            ? r.distance >= 1000 ? `${(r.distance / 1000).toFixed(1)}km` : `${r.distance}m`
+            : "—";
+          const costStr = r.cost ? `¥${r.cost}` : "—";
+          lines.push(`| ${medal} | **${r.name}** | ${r.rating.toFixed(1)} | ${costStr} | ${distStr} | ${r.address} |`);
+        }
+
+        lines.push("");
+        lines.push(`> 共搜索到 ${allPois.length} 条, 筛选评分 ≥ ${minRating}, 展示前 ${ranked.length}`);
+
+        return { content: [{ type: "text", text: lines.join("\n") }] };
       }
 
       // ── Distance ────────────────────────────────────

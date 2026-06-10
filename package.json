@@ -1,7 +1,7 @@
 {
   "name": "amap-mcp-server",
-  "version": "1.0.0",
-  "description": "高德地图 MCP Server — 为 AI 助手提供路径规划、地理编码、POI 搜索等 9 个地图工具",
+  "version": "1.1.0",
+  "description": "高德地图 MCP Server — 为 AI 助手提供路径规划、地理编码、POI 搜索、评分榜单等 10 个地图工具",
   "type": "module",
   "main": "server.js",
   "scripts": {
