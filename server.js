@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -213,11 +214,36 @@ const TOOLS = [
       required: ["keywords"],
     },
   },
+  {
+    name: "amap_weather",
+    description:
+      "天气查询。查询指定城市的实时天气或未来预报。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        city: { type: "string", description: "城市名称或 adcode，如「北京」「440300」" },
+        extensions: { type: "string", description: "base=实时天气, all=未来4天预报（默认all）" },
+      },
+      required: ["city"],
+    },
+  },
+  {
+    name: "amap_poi_detail",
+    description:
+      "POI 详情查询。根据 POI ID 获取详细信息——评分、人均、营业时间、图片。配合搜索/扫街榜使用。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "POI ID，来自搜索结果的 id 字段" },
+      },
+      required: ["id"],
+    },
+  },
 ];
 
 // ── Server ───────────────────────────────────────────────────
 const server = new Server(
-  { name: "amap-mcp-server", version: "1.1.0" },
+  { name: "amap-mcp-server", version: "1.2.0" },
   { capabilities: { tools: {} } }
 );
 
@@ -592,6 +618,84 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             text: `📍 当前 IP 位置: ${data.province || ""} ${data.city || ""}  (${data.rectangle || ""})`,
           }],
         };
+      }
+
+      // ── Weather ─────────────────────────────────────
+      case "amap_weather": {
+        const data = await amapGet("/v3/weather/weatherInfo", {
+          city: args?.city,
+          extensions: args?.extensions || "all",
+        });
+        if (!data?.lives?.length && !data?.forecasts?.length) {
+          return { content: [{ type: "text", text: `天气查询失败：${data?.info || "无数据"}` }] };
+        }
+        const lines = [];
+        // Real-time weather
+        if (data.lives) {
+          lines.push(`## 🌤 实时天气 · ${args?.city}`, "");
+          for (const l of data.lives) {
+            lines.push(`| 项目 | 值 |`);
+            lines.push(`|------|-----|`);
+            lines.push(`| 城市 | ${l.city} (${l.adcode}) |`);
+            lines.push(`| 天气 | ${l.weather} |`);
+            lines.push(`| 温度 | ${l.temperature}°C |`);
+            lines.push(`| 风向 | ${l.winddirection} |`);
+            lines.push(`| 风力 | ${l.windpower}级 |`);
+            lines.push(`| 湿度 | ${l.humidity}% |`);
+            lines.push(`| 发布时间 | ${l.reporttime} |`);
+          }
+        }
+        // Forecast
+        if (data.forecasts) {
+          for (const f of data.forecasts) {
+            lines.push(`\n## 📅 预报 · ${f.city}`, "");
+            lines.push(`| 日期 | 白天 | 夜间 | 温度 | 风向 | 风力 |`);
+            lines.push(`|------|------|------|------|------|------|`);
+            for (const cast of f.casts || []) {
+              lines.push(`| ${cast.date} | ${cast.dayweather} ${cast.daytemp}°C | ${cast.nightweather} ${cast.nighttemp}°C | ${cast.daytemp}/${cast.nighttemp}°C | ${cast.daywind} | ${cast.daypower}级 |`);
+            }
+          }
+        }
+        return { content: [{ type: "text", text: lines.join("\n") }] };
+      }
+
+      // ── POI Detail ──────────────────────────────────
+      case "amap_poi_detail": {
+        const data = await amapGet("/v3/place/detail", {
+          id: args?.id,
+        });
+        const pois = data?.pois || [];
+        if (!pois.length) {
+          return { content: [{ type: "text", text: `POI 详情查询失败：${data?.info || "无数据"}` }] };
+        }
+        const p = pois[0];
+        const lines = [
+          `## 📌 ${p.name}`,
+          ``,
+          `| 项目 | 值 |`,
+          `|------|-----|`,
+          `| 地址 | ${p.address || "—"} |`,
+          `| 坐标 | ${p.location || "—"} |`,
+          `| 电话 | ${p.tel || "—"} |`,
+          `| 类型 | ${p.type || "—"} |`,
+          `| 评分 | ${p.biz_ext?.rating || "—"} |`,
+          `| 人均 | ${p.biz_ext?.cost ? "¥" + p.biz_ext.cost : "—"} |`,
+          `| 营业时间 | ${p.biz_ext?.open_time || "—"} |`,
+          `| 标签 | ${(p.atag || []).join("、") || "—"} |`,
+        ];
+        if (p.photos?.length) {
+          lines.push("", "**图片：**");
+          for (const photo of p.photos.slice(0, 5)) {
+            lines.push(`  - ${photo.url}`);
+          }
+        }
+        if (p.featured_reviews_remake?.length) {
+          lines.push("", "**精选评论：**");
+          for (const r of p.featured_reviews_remake.slice(0, 3)) {
+            lines.push(`  > ${r}`);
+          }
+        }
+        return { content: [{ type: "text", text: lines.join("\n") }] };
       }
 
       default:

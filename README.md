@@ -24,6 +24,8 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that w
 | `amap_poi_around` | 📍 Nearby search within a radius |
 | `amap_distance` | 📏 Batch distance/time measurement (up to 10 origins) |
 | `amap_poi_ranking` | 🏆 Rating-based POI ranking — like Amap's "Street Ranking". Search by keyword, sort by rating/cost, top N |
+| `amap_poi_detail` | 📋 POI detail lookup — get full info (rating, cost, hours, photos, reviews) by POI ID |
+| `amap_weather` | 🌤 Weather query — real-time or 4-day forecast for any Chinese city |
 | `amap_ip_location` | 🏠 IP-based coarse location (city level) |
 
 ### Prerequisites
@@ -112,6 +114,8 @@ MIT © 2026 曾泽瑞 (Zeng Zerui)
 | `amap_poi_search` | 🔍 关键词搜索地点（餐厅、酒店、加油站等） |
 | `amap_poi_around` | 📍 周边搜索（指定半径） |
 | `amap_poi_ranking` | 🏆 评分榜单——类似高德「扫街榜」，按评分/价格排序，Top N |
+| `amap_poi_detail` | 📋 POI 详情——根据 ID 获取完整信息（评分/人均/营业时间/图片/评论） |
+| `amap_weather` | 🌤 天气查询——全国城市实时天气或 4 日预报 |
 | `amap_distance` | 📏 批量测距（最多 10 个起点同时比较） |
 | `amap_ip_location` | 🏠 IP 粗略定位（城市级） |
 
